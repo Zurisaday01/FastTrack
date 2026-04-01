@@ -1,0 +1,221 @@
+package auth
+
+import (
+	"encoding/json"
+	"errors"
+	"net/http"
+	"os"
+	"strings"
+
+	"github.com/Zurisaday01/FastTrack/internal/apperrors"
+	"github.com/Zurisaday01/FastTrack/internal/helpers"
+)
+
+type Handler struct {
+	service   Service
+	appErrors *apperrors.AppErrors
+}
+
+func NewHandler(service Service, appErrors *apperrors.AppErrors) *Handler {
+	return &Handler{service: service, appErrors: appErrors}
+}
+
+func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var input RegisterRequest
+
+	// Decode JSON body with strict field checking
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+
+	err := decoder.Decode(&input)
+	if err != nil {
+		h.appErrors.BadRequest(w, err)
+		return
+	}
+
+	// Clean inputs
+	firstName := strings.TrimSpace(input.FirstName)
+	lastName := strings.TrimSpace(input.LastName)
+	email := strings.TrimSpace(input.Email)
+	password := strings.TrimSpace(input.Password)
+
+	// Validate inputs
+	if firstName == "" {
+		h.appErrors.BadRequest(w, errors.New("first name is required"))
+		return
+	}
+
+	if lastName == "" {
+		h.appErrors.BadRequest(w, errors.New("last name is required"))
+		return
+	}
+
+	if email == "" {
+		h.appErrors.BadRequest(w, errors.New("email is required"))
+		return
+	}
+	if password == "" {
+		h.appErrors.BadRequest(w, errors.New("password is required"))
+		return
+	}
+	if err := helpers.ValidatePassword(password); err != nil {
+		h.appErrors.BadRequest(w, err)
+		return
+	}
+
+	id, err := h.service.Register(ctx, RegisterInput{
+		FirstName: firstName,
+		LastName:  lastName,
+		Email: strings.ToLower(email),
+		Password: password,
+	})
+
+	if err != nil {
+		if errors.Is(err, apperrors.ErrEmailAlreadyExists) {
+			h.appErrors.Conflict(w, "email already in use")
+			return
+		}
+		h.appErrors.ServerError(w, r, err)
+		return
+	}
+
+	// Return created user info (excluding password)
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(UserResponse{
+		ID:        id,
+		FirstName: firstName,
+		LastName:  lastName,
+		Email:     strings.ToLower(email),
+	})
+}
+
+func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var input LoginInput
+
+	// Decode JSON body with strict field checking
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+
+	// Decode
+	err := decoder.Decode(&input)
+	if err != nil {
+		h.appErrors.BadRequest(w, err)
+		return
+	}
+
+	// Clean inputs
+	email := strings.TrimSpace(input.Email)
+	password := strings.TrimSpace(input.Password)
+
+	// Validate inputs
+	if email == "" {
+		h.appErrors.BadRequest(w, errors.New("email is required"))
+		return
+	}
+
+	if password == "" {
+		h.appErrors.BadRequest(w, errors.New("password is required"))
+		return
+	}
+
+	tokens, err := h.service.Login(ctx, LoginInput{
+		Email: email, 
+		Password: password,
+	})
+
+	if err != nil {
+		if errors.Is(err, apperrors.ErrInvalidCredentials) {
+			h.appErrors.Unauthorized(w, "invalid email or password")
+			return
+		}
+		h.appErrors.ServerError(w, r, err)
+		return
+	}
+
+	// Set tokens in cookies
+	http.SetCookie(w, &http.Cookie{
+		Name:     "accessToken",
+		Value:    tokens.AccessToken,
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteStrictMode,
+		Path:     "/",
+		MaxAge:   15 * 60, // 15 minutes
+	})
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refreshToken",
+		Value:    tokens.RefreshToken,
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteStrictMode,
+		Path:     "/",
+		MaxAge:   7 * 24 * 60 * 60, // 7 days
+	})
+
+	// Return email to the user
+	json.NewEncoder(w).Encode(UserResponse{
+		Email: email,
+	})
+}
+
+func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
+	var input RefreshRequest
+
+	// Decode JSON body with strict field checking
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+
+	err := decoder.Decode(&input)
+	if err != nil {
+		h.appErrors.BadRequest(w, err)
+		return
+	}
+
+	// Validate input
+	refreshToken := strings.TrimSpace(input.RefreshToken)
+
+	if refreshToken == "" {
+		h.appErrors.BadRequest(w, errors.New("refreshToken is required"))
+		return
+	}
+
+	tokens, err := h.service.RefreshTokens(refreshToken)
+	if err != nil {
+		if errors.Is(err, apperrors.ErrInvalidToken) {
+			h.appErrors.Unauthorized(w, "invalid or expired refresh token")
+			return
+		}
+		h.appErrors.ServerError(w, r, err)
+		return
+	}
+
+	// Return tokens
+	json.NewEncoder(w).Encode(tokens)
+}
+
+func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
+    // Get cookie
+    cookie, err := r.Cookie("accessToken")
+    if err != nil {
+        h.appErrors.Unauthorized(w, "not authenticated")
+        return
+    }
+
+    // Validate token
+    claims, err := helpers.ParseToken(cookie.Value, os.Getenv("JWT_SECRET"))
+    if err != nil {
+        h.appErrors.Unauthorized(w, "invalid or expired token")
+        return
+    }
+
+    // Return user info
+    json.NewEncoder(w).Encode(map[string]string{
+        "id":    claims.UserID.String(),
+        "email": claims.Email,
+    })
+}
