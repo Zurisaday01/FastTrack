@@ -53,15 +53,49 @@ export const login = async ({ email, password }: LoginData) => {
 	return await response.json();
 };
 
+// When the access token expires (15 min) this will return 401
 export const getProfile = async () => {
 	const response = await fetch(`${API_URL}/api/auth/me`, {
 		method: 'GET',
 		credentials: 'include', // Include cookies for session management
 	});
 
-	if (!response.ok) {
-		return null; // Not logged in or error occurred
+	// Access token expired — try to refresh
+	if (response.status === 401) {
+		try {
+			await refreshTokens(); // Go sets new cookies automatically
+			// Retry the original request
+			const retryResponse = await fetch(`${API_URL}/api/auth/me`, {
+				method: 'GET',
+				credentials: 'include',
+			});
+			if (!retryResponse.ok) return null;
+			return retryResponse.json();
+		} catch {
+			return null; // Refresh token also expired, user must log in again
+		}
 	}
 
 	return await response.json();
+};
+
+export const refreshTokens = async () => {
+	const response = await fetch(`${API_URL}/api/auth/refresh`, {
+		method: 'POST',
+		credentials: 'include',
+	});
+
+	if (!response.ok) throw new Error('Session expired');
+	return response.json();
+};
+
+export const logout = async () => {
+	const response = await fetch(`${API_URL}/api/auth/logout`, {
+		method: 'POST',
+		credentials: 'include', // Include cookies for session management
+	});
+
+	if (!response.ok) {
+		throw new Error('Logout failed');
+	}
 };

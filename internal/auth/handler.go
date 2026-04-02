@@ -108,7 +108,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Clean inputs
-	email := strings.TrimSpace(input.Email)
+	email := strings.TrimSpace(strings.ToLower(input.Email))
 	password := strings.TrimSpace(input.Password)
 
 	// Validate inputs
@@ -137,54 +137,23 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Set tokens in cookies
-	http.SetCookie(w, &http.Cookie{
-		Name:     "accessToken",
-		Value:    tokens.AccessToken,
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteStrictMode,
-		Path:     "/",
-		MaxAge:   15 * 60, // 15 minutes
-	})
-
-	http.SetCookie(w, &http.Cookie{
-		Name:     "refreshToken",
-		Value:    tokens.RefreshToken,
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteStrictMode,
-		Path:     "/",
-		MaxAge:   7 * 24 * 60 * 60, // 7 days
-	})
+	helpers.SetAuthCookies(w, tokens)
 
 	// Return email to the user
 	json.NewEncoder(w).Encode(UserResponse{
-		Email: email,
+		Email: strings.ToLower(email),
 	})
 }
 
 func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
-	var input RefreshRequest
-
-	// Decode JSON body with strict field checking
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-
-	err := decoder.Decode(&input)
+	// Read refresh token from cookie instead of body
+	cookie, err := r.Cookie("refreshToken")
 	if err != nil {
-		h.appErrors.BadRequest(w, err)
+		h.appErrors.BadRequest(w, errors.New("refresh token is required"))
 		return
 	}
 
-	// Validate input
-	refreshToken := strings.TrimSpace(input.RefreshToken)
-
-	if refreshToken == "" {
-		h.appErrors.BadRequest(w, errors.New("refreshToken is required"))
-		return
-	}
-
-	tokens, err := h.service.RefreshTokens(refreshToken)
+	tokens, err := h.service.RefreshTokens(cookie.Value)
 	if err != nil {
 		if errors.Is(err, apperrors.ErrInvalidToken) {
 			h.appErrors.Unauthorized(w, "invalid or expired refresh token")
@@ -194,9 +163,13 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Return tokens
-	json.NewEncoder(w).Encode(tokens)
+	// Set tokens in cookies
+	helpers.SetAuthCookies(w, tokens)
+
+	// Return status OK along with the tokens that are set in cookies by default
+	w.WriteHeader(http.StatusOK)
 }
+
 
 func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
     // Get cookie
@@ -218,4 +191,11 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
         "id":    claims.UserID.String(),
         "email": claims.Email,
     })
+}
+
+func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
+	// Clear auth cookies
+	helpers.ClearAuthCookies(w)
+
+	w.WriteHeader(http.StatusOK)
 }

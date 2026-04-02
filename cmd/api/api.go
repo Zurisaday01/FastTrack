@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -12,7 +11,6 @@ import (
 
 	"github.com/Zurisaday01/FastTrack/internal/apperrors"
 	"github.com/Zurisaday01/FastTrack/internal/auth"
-	"github.com/Zurisaday01/FastTrack/internal/helpers"
 )
 
 // Dependencies holds all shared dependencies for the app
@@ -61,13 +59,6 @@ func (app *application) mount() http.Handler {
 		w.Write([]byte("Hello from FastTrack API!"))
 	})
 
-	r.Get("/test-hash", func(w http.ResponseWriter, r *http.Request) {
-		password := "Kazi1234$"
-		hash, _ := helpers.HashPassword(password)
-		match, err := helpers.VerifyPassword(password, hash)
-		fmt.Fprintf(w, "hash: %s\nmatch: %v\nerr: %v\n", hash, match, err)
-	})
-
 	// Group all API routes together with JSON middleware
 	r.Group(func (r chi.Router) {
 		// Only apply JSON content type middleware to API routes
@@ -84,6 +75,7 @@ func (app *application) mount() http.Handler {
 			r.Post("/auth/login", authHandler.Login)
 			r.Post("/auth/refresh", authHandler.Refresh)
 			r.Post("/auth/register", authHandler.Register)
+			r.Post("/auth/logout", authHandler.Logout)
 			r.Get("/auth/me", authHandler.Me)
 		})
 	})

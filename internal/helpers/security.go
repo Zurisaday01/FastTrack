@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -232,4 +233,57 @@ func ValidatePassword(password string) error {
     }
 
     return nil
+}
+
+// Set tokens in cookies
+func SetAuthCookies(w http.ResponseWriter, tokens TokenPair) {
+    isProduction := os.Getenv("ENV") == "production"
+
+    // Use SameSite=Strict in production for better security, and SameSite=Lax in development for easier testing
+    var sameSiteValue http.SameSite
+    if isProduction {
+        sameSiteValue = http.SameSiteStrictMode
+    } else {
+        sameSiteValue = http.SameSiteLaxMode
+    }
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "accessToken",
+		Value:    tokens.AccessToken,
+		HttpOnly: true,
+		Secure:   isProduction,
+		SameSite: sameSiteValue,
+		Path:     "/",
+		MaxAge:   15 * 60, // 15 minutes
+	})
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refreshToken",
+		Value:    tokens.RefreshToken,
+		HttpOnly: true,
+		Secure:   isProduction,
+		SameSite: sameSiteValue,
+		Path:     "/",
+		MaxAge:   7 * 24 * 60 * 60, // 7 days
+	})
+}
+
+// ClearAuthCookies removes the authentication cookies
+func ClearAuthCookies(w http.ResponseWriter) {
+    // Clear both cookies by setting MaxAge to -1
+    http.SetCookie(w, &http.Cookie{
+		Name:     "accessToken",
+		Value:    "",
+		HttpOnly: true,
+		Path:     "/",
+		MaxAge:   -1, 
+	})
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refreshToken",
+		Value:    "",
+		HttpOnly: true,
+		Path:     "/",
+		MaxAge:   -1,
+	})
 }

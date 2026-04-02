@@ -1,9 +1,10 @@
 import { NAV_ITEMS } from '../../lib/constants';
 import ModeToggle from '../mode-toggle';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+
 import { Separator } from '@/components/ui/separator';
 import { Button } from '../ui/button';
 import { Icons } from '../icons';
+import UserAvatar from '../auth/user-avatar';
 
 interface HeaderProps {
 	activeNav: string;
@@ -13,7 +14,7 @@ const Header = ({ activeNav }: HeaderProps) => {
 	const label = NAV_ITEMS.find(n => n.id === activeNav)?.label ?? 'Dashboard';
 
 	return (
-		<header className='h-[60px]  backdrop-blur-[16px] border-b border-primary/30 flex items-center justify-between px-6 sticky top-0 z-10 flex-shrink-0'>
+		<header className='h-15  backdrop-blur-lg border-b border-primary/30 flex items-center justify-between px-6 sticky top-0 z-10 shrink-0'>
 			{/* page title */}
 			<h1 className='leading-2'>{label}</h1>
 
@@ -41,12 +42,7 @@ const Header = ({ activeNav }: HeaderProps) => {
 				<ModeToggle />
 
 				{/* avatar */}
-				<Avatar className='h-8 w-8 cursor-pointer ring-2 ring-primary/30'>
-					<AvatarImage src='#' alt='Alex Rivera' />
-					<AvatarFallback className='bg-gradient-to-br from-primary to-primary-dark text-white text-xs font-bold'>
-						ZE
-					</AvatarFallback>
-				</Avatar>
+				<UserAvatar/>
 			</div>
 		</header>
 	);
