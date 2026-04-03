@@ -287,3 +287,19 @@ func ClearAuthCookies(w http.ResponseWriter) {
 		MaxAge:   -1,
 	})
 }
+
+// helper to get the authenticated user's ID from the cookie
+func AuthenticateRequest(w http.ResponseWriter, r *http.Request) (uuid.UUID, error) {
+    cookie, err := r.Cookie("accessToken")
+    if err != nil {
+        return uuid.Nil, apperrors.ErrNotAuthenticated
+    }
+
+    claims, err := ParseToken(cookie.Value, os.Getenv("JWT_SECRET"))
+    if err != nil {
+        return uuid.Nil, apperrors.ErrInvalidToken
+    }
+
+    return claims.UserID, nil
+}
+

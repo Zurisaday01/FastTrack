@@ -76,6 +76,7 @@ export const getProfile = async () => {
 		}
 	}
 
+	if (!response.ok) return null; // Other errors (e.g. server issues)
 	return await response.json();
 };
 
@@ -86,7 +87,6 @@ export const refreshTokens = async () => {
 	});
 
 	if (!response.ok) throw new Error('Session expired');
-	return response.json();
 };
 
 export const logout = async () => {
@@ -95,7 +95,5 @@ export const logout = async () => {
 		credentials: 'include', // Include cookies for session management
 	});
 
-	if (!response.ok) {
-		throw new Error('Logout failed');
-	}
+	if (!response.ok) throw new Error('Logout failed');
 };

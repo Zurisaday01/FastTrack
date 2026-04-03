@@ -5,9 +5,10 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/Zurisaday01/FastTrack/internal/auth"
 	"github.com/Zurisaday01/FastTrack/internal/config"
 	"github.com/Zurisaday01/FastTrack/internal/database"
-	"github.com/Zurisaday01/FastTrack/internal/auth"
+	"github.com/Zurisaday01/FastTrack/internal/goal"
 )
 
 func main() {
@@ -39,6 +40,7 @@ func main() {
 		logger:  logger,
 		addr:     ":8080",
 		auth:      &auth.AuthModel{DB: db},
+		goal:      &goal.GoalModel{DB: db},
 	}
 
 

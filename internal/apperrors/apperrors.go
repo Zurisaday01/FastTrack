@@ -63,9 +63,11 @@ func (e *AppErrors) NotFound(w http.ResponseWriter, entity string) {
 
 // --- Sentinel errors ---
 
+var ErrNotAuthenticated = errors.New("not authenticated")
 var ErrEmailAlreadyExists = errors.New("email already exists")
 var ErrInvalidCredentials = errors.New("invalid credentials")
 var ErrInvalidToken       = errors.New("invalid or expired token")
+var ErrAlreadyExists       = errors.New("resource already exists") // matches with conflict status code
 
 // --- New AppErrors methods ---
 

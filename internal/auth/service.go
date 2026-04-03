@@ -21,6 +21,7 @@ type Service interface {
 	Login(ctx context.Context, input LoginInput) (TokenPair, error)
 	ValidateToken(tokenStr string) (*Claims, error)
 	RefreshTokens(refreshToken string) (TokenPair, error)
+	GetUserById(ctx context.Context, id uuid.UUID) (User, error)
 }
 
 type svc struct {
@@ -48,6 +49,21 @@ func (s *svc) Register(ctx context.Context, input RegisterInput) (uuid.UUID, err
 	input.Password = hashedPassword
 
 	return s.model.CreateUser(ctx, input)
+}
+
+func (s *svc) GetUserById(ctx context.Context, id uuid.UUID) (User, error) {
+	user, err := s.model.GetUserById(ctx, id)
+
+	if err != nil {
+		// If there is an error and it's not a "record not found" error, return it
+		if !errors.Is(err, apperrors.ErrRecordNotFound) {
+			return User{}, err
+		}
+		// If it's a "record not found" error, return an empty user and no error (we will handle this case in the handler)
+		return User{}, nil
+	}
+
+	return user, nil
 }
 
 func (s *svc) Login(ctx context.Context, input LoginInput) (TokenPair, error) {

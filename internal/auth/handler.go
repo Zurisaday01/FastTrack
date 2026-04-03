@@ -172,6 +172,7 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 
 
 func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
     // Get cookie
     cookie, err := r.Cookie("accessToken")
     if err != nil {
@@ -186,10 +187,21 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    // Return user info
-    json.NewEncoder(w).Encode(map[string]string{
-        "id":    claims.UserID.String(),
-        "email": claims.Email,
+	// Fetch user from the db to retrieve profile info (excluding password)
+	user, err := h.service.GetUserById(ctx, claims.UserID)
+
+	// If there is an error and it's not a "record not found" error, return it
+	if err != nil {
+		h.appErrors.ServerError(w, r, err)
+		return
+	}
+
+    // Return user info (using db data)
+    json.NewEncoder(w).Encode(UserResponse{
+        ID:    user.ID,
+        Email: user.Email,
+		FirstName: user.FirstName,
+		LastName: user.LastName,
     })
 }
 

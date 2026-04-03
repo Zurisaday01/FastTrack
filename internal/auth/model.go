@@ -46,6 +46,24 @@ func (am *AuthModel) GetUserByEmail(ctx context.Context, email string) (User, er
 	return u, nil
 }
 
+// GetUserById retrieves a user from the database by their ID
+// It returns the user if found, or an error if not found or if there was a problem querying the database
+func (am *AuthModel) GetUserById(ctx context.Context, id uuid.UUID) (User, error) {
+	stmt := `SELECT id, first_name, last_name, email, hashed_password, created_at FROM users WHERE id = $1`
+
+	var u User
+	err := am.DB.QueryRowContext(ctx, stmt, id).Scan(&u.ID, &u.FirstName, &u.LastName, &u.Email, &u.HashedPassword, &u.CreatedAt)
+	
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return User{}, apperrors.ErrRecordNotFound
+		}
+		return User{}, err
+	}
+
+	return u, nil
+}
+
 // EmailExists checks if a user with the given email already exists in the database
 // It returns true if the email exists, false if it does not, and an error if there was a problem querying the database
 func (am *AuthModel) EmailExists(ctx context.Context, email string) (bool, error) {

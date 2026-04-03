@@ -11,6 +11,7 @@ import (
 
 	"github.com/Zurisaday01/FastTrack/internal/apperrors"
 	"github.com/Zurisaday01/FastTrack/internal/auth"
+	"github.com/Zurisaday01/FastTrack/internal/goal"
 )
 
 // Dependencies holds all shared dependencies for the app
@@ -18,6 +19,7 @@ type application struct {
 	logger  *slog.Logger
 	addr    string
 	auth       *auth.AuthModel
+	goal       *goal.GoalModel
 	appErrors *apperrors.AppErrors
 }
 
@@ -71,12 +73,21 @@ func (app *application) mount() http.Handler {
 
 		authService := auth.NewService(app.auth)
 		authHandler := auth.NewHandler(authService, appErrors)
+
+		goalService := goal.NewService(app.goal)
+		goalHandler := goal.NewHandler(goalService, appErrors)
 		r.Route("/api", func(r chi.Router) {
 			r.Post("/auth/login", authHandler.Login)
 			r.Post("/auth/refresh", authHandler.Refresh)
 			r.Post("/auth/register", authHandler.Register)
 			r.Post("/auth/logout", authHandler.Logout)
 			r.Get("/auth/me", authHandler.Me)
+
+			r.Post("/goals", goalHandler.CreateGoal)
+			r.Get("/goals", goalHandler.ListGoals)
+			r.Get("/goals/{id}", goalHandler.GetGoalById)
+			r.Patch("/goals/{id}", goalHandler.UpdateGoal)
+			r.Delete("/goals/{id}", goalHandler.DeleteGoal)
 		})
 	})
 	
