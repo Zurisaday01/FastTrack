@@ -1,0 +1,1 @@
+ALTER TABLE fasting_goals ADD COLUMN title text NOT NULL;

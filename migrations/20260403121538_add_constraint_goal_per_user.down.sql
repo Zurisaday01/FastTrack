@@ -1,0 +1,1 @@
+ALTER TABLE fasting_goals DROP CONSTRAINT unique_goal_per_user;

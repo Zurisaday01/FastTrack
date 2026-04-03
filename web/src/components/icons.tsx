@@ -6,6 +6,7 @@ import {
 	Settings,
 	History,
 	ChevronLeft,
+	Goal,
 } from 'lucide-react';
 
 export const Icons = {
@@ -16,6 +17,7 @@ export const Icons = {
 	stats: ChartColumn,
 	settings: Settings,
 	chevronLeft: ChevronLeft,
+	goal: Goal,
 };
 
 export type IconType = keyof typeof Icons;

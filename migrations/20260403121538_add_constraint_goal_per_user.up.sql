@@ -1,0 +1,1 @@
+ALTER TABLE fasting_goals ADD CONSTRAINT unique_goal_per_user UNIQUE (user_id, title, window_start, window_end);

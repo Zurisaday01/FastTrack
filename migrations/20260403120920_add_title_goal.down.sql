@@ -1,0 +1,1 @@
+ALTER TABLE fasting_goals DROP COLUMN title;

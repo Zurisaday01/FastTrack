@@ -3,8 +3,10 @@ package goal
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/Zurisaday01/FastTrack/internal/apperrors"
 	"github.com/Zurisaday01/FastTrack/internal/helpers"
@@ -129,20 +131,31 @@ func (h *Handler) CreateGoal(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Trim and validate required fields
+	title := strings.TrimSpace(input.Title)
 	windowStart := strings.TrimSpace(input.WindowStart)
 	windowEnd := strings.TrimSpace(input.WindowEnd)
 
-	if windowStart == "" {
-		h.appErrors.BadRequest(w, errors.New("windowStart is required"))
+	if title == "" {
+		h.appErrors.BadRequest(w, errors.New("title is required"))
 		return
 	}
 
-	if windowEnd == "" {
-		h.appErrors.BadRequest(w, errors.New("windowEnd is required"))
+	_, err = time.Parse(helpers.TimeLayout, windowStart)
+	if err != nil {
+		fmt.Errorf("invalid windowStart format: %v", err)
+		h.appErrors.BadRequest(w, errors.New("windowStart must be a valid time (HH:MM:SS)"))
 		return
 	}
+
+	_, err = time.Parse(helpers.TimeLayout, windowEnd)
+	if err != nil {
+		h.appErrors.BadRequest(w, errors.New("windowEnd must be a valid time (HH:MM:SS)"))
+		return
+	}
+
 
 	id, err := h.service.CreateGoal(ctx, userId, CreateUpdateGoalInput{
+		Title: title, 
 		WindowStart: windowStart,
 		WindowEnd: windowEnd,
 	})
@@ -212,20 +225,29 @@ func (h *Handler) UpdateGoal(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Trim and validate required fields
+	title := strings.TrimSpace(input.Title)
 	windowStart := strings.TrimSpace(input.WindowStart)
 	windowEnd := strings.TrimSpace(input.WindowEnd)
 
-	if windowStart == "" {
-		h.appErrors.BadRequest(w, errors.New("windowStart is required"))
+	if title == "" {
+		h.appErrors.BadRequest(w, errors.New("title is required"))
 		return
 	}
 
-	if windowEnd == "" {
-		h.appErrors.BadRequest(w, errors.New("windowEnd is required"))
+	_, err = time.Parse(helpers.TimeLayout, windowStart)
+	if err != nil {
+		h.appErrors.BadRequest(w, errors.New("windowStart must be a valid time (HH:MM:SS)"))
+		return
+	}
+
+	_, err = time.Parse(helpers.TimeLayout, windowEnd)
+	if err != nil {
+		h.appErrors.BadRequest(w, errors.New("windowEnd must be a valid time (HH:MM:SS)"))
 		return
 	}
 
 	err = h.service.UpdateGoal(ctx, goalId, userId, CreateUpdateGoalInput{
+		Title: title,
 		WindowStart: windowStart,
 		WindowEnd: windowEnd,
 	})

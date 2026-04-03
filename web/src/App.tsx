@@ -15,6 +15,7 @@ import PublicRoute from './components/auth/public-route';
 import Today from './pages/today';
 import Stats from './pages/stats';
 import History from './pages/history';
+import Goals from './pages/goals';
 import Settings from './pages/settings';
 import Login from './pages/login';
 import Register from './pages/register';
@@ -47,6 +48,7 @@ function App() {
 							<Route path='today' element={<Today />} />
 							<Route path='stats' element={<Stats />} />
 							<Route path='history' element={<History />} />
+							<Route path='goals' element={<Goals />} />
 							<Route path='settings' element={<Settings />} />
 							{/* <Route path='quotes' element={<Quotes />} />
 						<Route path='quotes/:quoteId' element={<Quote />} /> */}
